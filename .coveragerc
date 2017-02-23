@@ -1,0 +1,16 @@
+[paths]
+source =
+   src/thundercache
+   */site-packages/thundercache
+
+[run]
+branch = true
+source =
+    thundercache
+    tests
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*
