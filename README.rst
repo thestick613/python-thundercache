@@ -90,82 +90,84 @@ Note, to combine the coverage data from all the tox environments run:
 Usage
 =====
 
+```python
     # Distributed Lock
-    from thundercache import LockFactory, retry_command
-    from redis.sentinel import Sentinel
+from thundercache import LockFactory, retry_command
+from redis.sentinel import Sentinel
 
-    sentinel = Sentinel()
-    redis_sentinel_master_instance = retry_command(sentinel.master_for, "your_sentinel_service_name", socket_timeout=20)
+sentinel = Sentinel()
+redis_sentinel_master_instance = retry_command(sentinel.master_for, "your_sentinel_service_name", socket_timeout=20)
 
-    locks = LockFactory(expires=720, timeout=10, redis=redis_sentinel_master_instance)
+locks = LockFactory(expires=720, timeout=10, redis=redis_sentinel_master_instance)
 
-    with locks('my_lock'):
-        # do stuff with a distributed redis lock across different processes and networks
-        # pretty cool right!
-        pass
-
-    
-    # Local Redis Cache
-    from thundercache import SmartLocalRedisCacheFactory, BaseCacheMixin)
-    import time
-
-    lcached = SmartLocalRedisCacheFactory()
+with locks('my_lock'):
+    # do stuff with a distributed redis lock across different processes and networks
+    # pretty cool right!
+    pass
 
 
-    class MyClass(BaseCacheMixin):
+# Local Redis Cache
+from thundercache import SmartLocalRedisCacheFactory, BaseCacheMixin)
+import time
 
-        @lcached("method", max_age=10, critical=2)
-        def method(self, n):
-            time.sleep(n)
-            return n*n
+lcached = SmartLocalRedisCacheFactory()
 
-    @lcached("somefunc', max_age=10, critical=2)
-    def somefunc(n):
+
+class MyClass(BaseCacheMixin):
+
+    @lcached("method", max_age=10, critical=2)
+    def method(self, n):
+    time.sleep(n)
+        return n*n
+
+@lcached("somefunc', max_age=10, critical=2)
+def somefunc(n):
+    time.sleep(n)
+    return n*n
+
+
+mc = MyClass()
+print mc.method(3)
+# prints "9" after three seconds
+print mc.method(3)
+# prints "9" instantly
+
+print somefunc(2)
+# prints "4" after two seconds
+print somefunc(2)
+# prints 4
+
+
+
+# Distributed Redis Cache
+from thundercache import SmartRedisCacheFactory, retry_command
+from redis.sentinel import Sentinel
+
+sentinel = Sentinel()
+cached = SmartRedisCacheFactory(sentinel, "your_sentinel_service_name")
+# you can now use the @cached decorator in the same way you use @lcached
+
+
+
+# Per process cache
+from thundercache import BaseCache
+
+class MyClass(BaseCacheMixin):
+    @BaseCache("mymethod", max_age=10)
+    def mymethod(self, n):
         time.sleep(n)
         return n*n
 
-
-    mc = MyClass()
-    print mc.method(3)
-    # prints "9" after three seconds
-    print mc.method(3)
-    # prints "9" instantly
-
-    print somefunc(2)
-    # prints "4" after two seconds
-    print somefunc(2)
-    # prints 4
+@BaseCache("otherfunc', max_age=10)
+def otherfunc(n):
+    time.sleep(n)
+    return n*n
 
 
-
-    # Distributed Redis Cache
-    from thundercache import SmartRedisCacheFactory, retry_command
-    from redis.sentinel import Sentinel
-
-    sentinel = Sentinel()
-    cached = SmartRedisCacheFactory(sentinel, "your_sentinel_service_name")
-    # you can now use the @cached decorator in the same way you use @lcached
-
-
-
-    # Per process cache
-    from thundercache import BaseCache
-    
-    class MyClass(BaseCacheMixin):
-        @BaseCache("mymethod", max_age=10)
-        def mymethod(self, n):
-            time.sleep(n)
-            return n*n
-
-    @BaseCache("otherfunc', max_age=10)
-    def otherfunc(n):
-        time.sleep(n)
-        return n*n
-
-
-    # You can also chain these decorators
-    @BaseCache('x', 10)
-    @cached('y', 60)
+# You can also chain these decorators
+@BaseCache('x', 10)
+@cached('y', 60)
     def funct_or_method(*args,  **kwargs):
-        return None
+    return None
 
+```
