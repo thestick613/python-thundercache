@@ -141,21 +141,22 @@ class BaseCache(BaseHelper):
 
     #TODO: find more elegant method to prune cached responses based on how close they are to expiration date
     def cleansome(self):
-        cleanup = False
-        cleaned = 0
-        while not cleanup:
-            if self.responses.keys():
-                k = random.choice(self.responses.keys())
-                if (time.time() - self.responses[k]['ts']) > self.responses[k]['keep_for']:
-                    self.responses.pop(k)
-                    cleaned += 1
+        if random.random() <= 0.05:
+            cleanup = False
+            cleaned = 0
+            while not cleanup:
+                if self.responses.keys():
+                    k = random.choice(self.responses.keys())
+                    if (time.time() - self.responses[k]['ts']) > self.responses[k]['keep_for']:
+                        self.responses.pop(k)
+                        cleaned += 1
+                    else:
+                        cleanup = True
+
+                    if cleaned > 20:
+                        cleanup = True
                 else:
                     cleanup = True
-
-                if cleaned > 10:
-                    cleanup = True
-            else:
-                cleanup = True
 
     def __call__(self, fn):
         def inner(*args, **kwargs):
@@ -221,7 +222,7 @@ class SmartRedisCache(BaseHelper):
             if not _old_data or (time.time() - _old_data['ts'] > self.roughly(_old_data['keep_for'])):
                 result = fn(*args, **kwargs)
 
-                self.redis.setex(name=key, time=2 * self.max_age,
+                self.redis.setex(name=key, time=3 * self.max_age,
                                  value=pickle.dumps({'result': pickle.dumps(result, 2), 'keep_for': self.max_age, 'ts': time.time()}, 2))
 
                 self.redis.setex(name="BCK_%s_BCK" % key, time=3600 * 24,
